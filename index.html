@@ -101,11 +101,12 @@
   .marquee span i{font-style:normal;color:var(--accent-bright);padding-left:36px}
   @keyframes scroll{to{transform:translateX(-50%)}}
 
-  /* giant name band */
-  .giant{padding:30px 0 34px;text-align:center;white-space:nowrap;line-height:.95}
-  .giant span{font-family:"Archivo",sans-serif;font-weight:900;font-size:clamp(58px,11vw,164px);letter-spacing:-.03em;color:#fff}
+  /* giant name band - fitted fully inside the viewport, nothing cut off */
+  .giant{padding:30px 20px 34px;text-align:center;line-height:.95;overflow:hidden;width:100%}
+  .giant>span{display:inline-block;font-family:"Archivo",sans-serif;font-weight:900;font-size:clamp(22px,7.2vw,112px);letter-spacing:-.03em;color:#fff;white-space:nowrap;max-width:100%}
   .giant .out{color:transparent;-webkit-text-stroke:2px var(--accent-bright)}
   .giant .dash{color:var(--accent-bright);-webkit-text-stroke:0}
+  @media (max-width:640px){ .giant{padding:24px 12px 28px} .giant .out{-webkit-text-stroke-width:1.5px} }
 
   /* frontend window overlapping the terminal */
   .term-ui{position:absolute;left:-16px;bottom:-24px;width:238px;background:#fff;color:var(--ink);border-radius:14px;padding:15px 16px 13px;box-shadow:0 26px 50px -18px rgba(0,0,0,.6);transform:rotate(1.5deg)}
@@ -1039,7 +1040,24 @@ payments · sms · geolocation
     var sec = document.querySelector(a.getAttribute('href'));
     if (sec) spySections.push({ link: a, sec: sec });
   });
-  var giantSpan = document.querySelector('.giant span');
+  var giantSpan = document.querySelector('.giant > span');
+  var giantBand = document.querySelector('.giant');
+  function fitGiant() {
+    if (!giantSpan || !giantBand) return;
+    // Reset to CSS size, then shrink until the full line fits inside the band
+    giantSpan.style.fontSize = '';
+    var bandStyle = window.getComputedStyle(giantBand);
+    var padX = (parseFloat(bandStyle.paddingLeft) || 0) + (parseFloat(bandStyle.paddingRight) || 0);
+    var avail = giantBand.clientWidth - padX - 2;
+    if (giantSpan.scrollWidth > avail && avail > 0) {
+      var current = parseFloat(window.getComputedStyle(giantSpan).fontSize) || 80;
+      var fitted = Math.floor(current * (avail / giantSpan.scrollWidth));
+      giantSpan.style.fontSize = Math.max(18, fitted) + 'px';
+    }
+  }
+  fitGiant();
+  window.addEventListener('resize', fitGiant);
+  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fitGiant); }
   var ticking = false;
   function onScroll() {
     if (ticking) return;
@@ -1055,14 +1073,6 @@ payments · sms · geolocation
         if (s.sec.getBoundingClientRect().top <= 140) current = s;
       });
       spySections.forEach(function (s) { s.link.classList.toggle('active', s === current); });
-      // Giant name band drifts gently against the scroll
-      if (giantSpan && !reduce) {
-        var r = giantSpan.getBoundingClientRect();
-        if (r.top < window.innerHeight && r.bottom > 0) {
-          var p = (r.top + r.height / 2 - window.innerHeight / 2) / window.innerHeight;
-          giantSpan.style.transform = 'translateX(' + (p * -36).toFixed(1) + 'px)';
-        }
-      }
     });
   }
   window.addEventListener('scroll', onScroll, { passive: true });
